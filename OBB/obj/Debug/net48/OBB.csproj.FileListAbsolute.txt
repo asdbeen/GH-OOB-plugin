@@ -1,0 +1,11 @@
+C:\Users\User\Desktop\GH-OOB-plugin\OBB\bin\Debug\net48\OBB.gha
+C:\Users\User\Desktop\GH-OOB-plugin\OBB\bin\Debug\net48\OBB.pdb
+C:\Users\User\Desktop\GH-OOB-plugin\OBB\obj\Debug\net48\OBB.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\User\Desktop\GH-OOB-plugin\OBB\obj\Debug\net48\OBB.AssemblyInfoInputs.cache
+C:\Users\User\Desktop\GH-OOB-plugin\OBB\obj\Debug\net48\OBB.AssemblyInfo.cs
+C:\Users\User\Desktop\GH-OOB-plugin\OBB\obj\Debug\net48\OBB.csproj.CoreCompileInputs.cache
+C:\Users\User\Desktop\GH-OOB-plugin\OBB\obj\Debug\net48\OBB.gha
+C:\Users\User\Desktop\GH-OOB-plugin\OBB\obj\Debug\net48\OBB.pdb
+C:\Users\User\Desktop\GH-OOB-plugin\OBB\obj\Debug\net48\OBB.csproj.AssemblyReference.cache
+C:\Users\User\Desktop\GH-OOB-plugin\OBB\obj\Debug\net48\OBB.Properties.Resources.resources
+C:\Users\User\Desktop\GH-OOB-plugin\OBB\obj\Debug\net48\OBB.csproj.GenerateResource.cache
