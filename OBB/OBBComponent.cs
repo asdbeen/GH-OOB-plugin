@@ -59,9 +59,7 @@ namespace OBB
 
             //=============================================================
 
-            myOBBSystem = new OBBSystem();
-            myOBBSystem.CheckObjCoPlanarity(OBJS);
-            int Sumnumber = I + I;
+            A = OBBSystemCheck(G);
 
 
             List<Circle> myoutput = myOBBSystem.ADDCIRCLE(OBJS);
