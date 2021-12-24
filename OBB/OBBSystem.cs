@@ -12,7 +12,7 @@ namespace OBB
         public int I;
         public System.Collections.Generic.List<GeometryBase> objs;
 
-         /// multi-object planarity/coplanarity check function
+         // multi-object planarity/coplanarity check function
         public Plane CheckObjCoPlanarity(List<GeometryBase> objs)
         {
             List<Point3d> ptlist = new List<Point3d>();
@@ -26,11 +26,11 @@ namespace OBB
                     Curve objcurve = (Curve) obj;
                     myresult = objcurve.TryGetPlane(out myplane);
 
-                    if (myresult == false)
-                    {
-                        Print("curve.TryGetPlane failed");
-                        return myplane;
-                    }
+                    //if (myresult == false)
+                    //{
+                    //Print("curve.TryGetPlane failed");
+                    //return myplane;
+                    //}
                     NurbsCurve mynurbscurve = objcurve.ToNurbsCurve();
                     
 
@@ -68,11 +68,11 @@ namespace OBB
                     {
                         myresult = face.TryGetPlane(out myplane);
 
-                        if (myresult == false)
-                        {
-                            Print("face.TryGetPlane failed");
-                            return myplane;
-                        }
+                        //if (myresult == false)
+                        //{
+                            ///Print("face.TryGetPlane failed");
+                        //    return myplane;
+                        //}
                         NurbsSurface mysurfaceface = face.ToNurbsSurface();
 
 
@@ -80,7 +80,7 @@ namespace OBB
                         {
                             ptlist.Add(cp.Location);
                         }
-
+                        Print("Here add a Brep");
                     }
                 }
 
@@ -88,11 +88,11 @@ namespace OBB
                 { 
                     Surface objsurface = (Surface)obj;
                     myresult = objsurface.TryGetPlane(out myplane);
-                    if (myresult == false)
-                    {
-                        Print("surface.TryGetPlane failed");
-                        return myplane;
-                    }
+                    //if (myresult == false)
+                    //{
+                    //    Print("surface.TryGetPlane failed");
+                    //    return myplane;
+                    //}
                     NurbsSurface mysurfaceface = objsurface.ToNurbsSurface();
 
                     foreach (ControlPoint cp in mysurfaceface.Points)
@@ -100,19 +100,44 @@ namespace OBB
                         ptlist.Add(cp.Location);
                     }
 
+                    Print("Here add a Surface");
+
                 }
 
                 else if (obj is Rhino.Geometry.Extrusion)
                 {
                     Extrusion objextrusion = (Extrusion)obj;
                     myresult = objextrusion.TryGetPlane(out myplane);
-                    if (myresult == false)
-                    {
-                        Print("surface.TryGetPlane failed");
-                        return myplane;
-                    }
+                    //if (myresult == false)
+                    //{
+                    //    Print("surface.TryGetPlane failed");
+                    //    return myplane;
+                    //}
+
+                    NurbsSurface mysurfaceface = objextrusion.ToNurbsSurface();
+
+                     foreach(ControlPoint cp in mysurfaceface.Points)
+                        {
+                            ptlist.Add(cp.Location);
+                        }
+                    Print("Here add a Extrusion");
                 }
 
+                else if (obj is Rhino.Geometry.Mesh)
+                {
+                    Mesh objmesh = (Mesh)obj;
+                    foreach(Point3d vert in objmesh.Vertices)
+                    {
+                        ptlist.Add(vert);
+
+                    }
+                    Print("Here add a mesh");
+                }
+
+                else
+                {
+                    return myplane;
+                }
 
             }
             Plane.FitPlaneToPoints(ptlist, out myplane);
