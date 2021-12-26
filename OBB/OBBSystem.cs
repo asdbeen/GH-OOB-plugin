@@ -278,21 +278,201 @@ namespace OBB
 
                 }
             }
+            return out_planes;
+        }
+
+
+        //this is the main 3D bb calculation search function
+        public void MinBBPlane(List<GeometryBase> objs,out Plane best_plane,Plane init_plane,List<Plane> planes, ref Box curr_box, ref double curr_vol)
+        {
+
+            best_plane = init_plane;
+
+            foreach (Plane plane in planes)
+            {
+                Box bb = BoundingBoxPlane(objs, plane);
+                
+                if (bb.Volume<curr_vol)
+                {
+                    curr_vol = bb.Volume;
+                    best_plane = plane;
+                    curr_box = bb;
+                }
+
+            }
+            
         }
 
         //3D (non-planar) bounding box routine
-        Min3DBoundingBox
+        public void Min3DBoundingBox(List<GeometryBase> objs,Plane init_plane, int count, bool rel_stop,bool im_rep,out Box curr_bb,out double curr_vol,out int passes )
+        {
+            // for non-planar or non-coplanar object(s)
+            // get initial fast bb in init plane (World XY), plus volume to compare
+            //this is the main 2D bb calculation search function
 
-        //this is the main 2D bb calculation search function
-        PlanarMinBB
+            curr_bb = BoundingBoxPlane(objs, init_plane, false);
+            curr_vol = curr_bb.Volume;
+
+            double tot_ang = Math.PI * 0.5;  //90 degrees for intial octant
+            double factor = 0.1; //angle reduction factor for each successive refinement pass
+            int max_passes = 20; //safety factor
+            int prec = Rhino.RhinoDoc.ActiveDoc.DistanceDisplayPrecision;
+            string us = Rhino.RhinoDoc.ActiveDoc.GetUnitSystemName(true, false, false, false);
+
+            //run intitial bb calculation
+            List<Plane> xyz_planes = GenerateOctantPlane(count);
+            Plane best_plane = new Plane();
+            MinBBPlane(objs, out best_plane, init_plane, xyz_planes, ref curr_bb, ref curr_vol);
+            //report the results of intial rough calculation
+            if (im_rep==true)
+            {
+                Console.WriteLine("Initial pass 0, volume:{0} {1}3", Math.Round(curr_vol, prec), us);
+            }
+            //refine with smaller angles arround best fit plane, loop until...
+            int i = 0;
+            for(i=0; i < max_passes; i++)
+            {
+                double prev_vol = curr_vol;
+
+                //reduce angle by factor, use refinement planes to generate array
+
+                tot_ang *= factor;
+                List <Plane> ref_planes = RotatePlaneArray3D(best_plane,tot_ang,count);
+                MinBBPlane(objs, out best_plane, best_plane, ref_planes, ref curr_bb, ref curr_vol);
+                double vol_diff = prev_vol - curr_vol;//vol. diff. over last pass, should be positive or 0
+                // print "Volume difference from last pass: {}".format(vol_diff) #debug(python language)
+                // check if difference is less than minimum "significant"
+                // rel_stop==True: relative stop value <.01% difference from previous
+
+                if (rel_stop==true)
+                {
+                    if (vol_diff < 0.0001*prev_vol)
+                    {
+                        break;
+                    }
+                }
+                else
+                {
+                    RhinoDoc rd = RhinoDoc.ActiveDoc;
+                    if (vol_diff < rd.ModelAbsoluteTolerance)
+                    {
+                        break;
+                    }
+                }
+                Rhino.RhinoApp.Wait();
+
+                if (im_rep ==true)
+                {
+                    Console.WriteLine("Refine pass {0}, volume:{1} {2}3", i + 1, Math.Round(curr_vol, prec), us);
+                }
+
+                //get out of loop if escape is pressed
+
+                if (Console.ReadKey().Key != ConsoleKey.Escape)
+                {
+                    Console.WriteLine("Refinement aborted after {0} passes", i + 1);
+                    break;
+                }
+            }
+            passes = i + 1;
+
+
+        }
+
+        public void PlanarMinBB(List<GeometryBase> objs,Plane plane, double tot_ang,int divs,out Plane curr_plane, out double curr_area)
+        {
+            double inc = tot_ang / divs;
+            //rotate plane half total angle minus direction
+            plane.Rotate(-tot_ang*0.5,plane.ZAxis,plane.Origin);
+            Box bb = BoundingBoxPlane(objs, plane);
+            curr_plane = new Plane(plane);
+            curr_area = BoxArea(bb);
+            //loop through angle increments
+            for(int i = 0; i < divs; i++)
+            {
+                plane.Rotate(inc,plane.ZAxis,plane.Origin);
+                bb = BoundingBoxPlane(objs, plane);
+                double new_area = BoxArea(bb);
+                if (new_area < curr_area)
+                {
+                    curr_area = new_area;
+                    curr_plane = plane;
+                }
+            }
+
+
+        }
 
         //2D planar bounding rectangle routine
-        MinBoundingRectanglePlane
+        public void MinBoundingRectanglePlane(List<GeometryBase> objs,Plane curr_plane, out Box f_bb,  out Double curr_area, out int i, bool im_rep = false)
+        {
+            //pass True argument above if you want to print intermediate results
+            //initialize
+            double factor = 0.01;
+            double angle = Math.PI * 0.5;
+            int divs = 90;
+            RhinoDoc rd = RhinoDoc.ActiveDoc;
+            double tol = rd.ModelAbsoluteTolerance;
+            string err_msg = "Unable to calculate bouding box area";
+            f_bb = new Box();
+            i= 0;
+            DateTime dt = System.DateTime.Now;
+            DateTime st = TimeZone.CurrentTimeZone.ToLocalTime(new DateTime(1970, 1, 1));
+            double stime = (dt - st).TotalMilliseconds;
+
+            ///get initial rough bounding box
+
+            Box init_bb = BoundingBoxPlane(objs, curr_plane, false);
+            curr_area = BoxArea(init_bb);
+            if (im_rep == true)
+            {
+                Console.WriteLine("Initial area: {}", curr_area);
+            }
+
+            //main calculation loop
+            int safe = 10;
+            for (i = 0; i < safe; i++)
+            {
+
+                PlanarMinBB(objs,curr_plane,angle,divs,out curr_plane, out curr_area);
+                double new_area = curr_area;
+                //abort if area is 0 or extremly small
+                if (new_area<tol*0.1)
+                {
+                    Console.WriteLine(err_msg);
+                    return;
+                }
+                //break out of loop if new area is the smae as prev. area within limit
+                if (Math.Abs(curr_area-new_area)<factor*tol)
+                {
+                    break;
+                }
+                //otherwise,decrease increments and loop
+                curr_area = new_area;
+                angle *= (1 / divs);
+                if(im_rep == true)
+                {
+                    Console.WriteLine("Refine stage {0} Area: {1}",i+1,curr_area);
+                    Rhino.RhinoApp.Wait();//wait for command line to print...
+                }
+                if (i==10)
+                {
+                    Console.WriteLine("Max loop limit reached");//debug
+                }
+            }
+
+           f_bb =BoundingBoxPlane(objs,curr_plane,true);
+
+            
+        }
 
         //used for planar bounding rectangle calculation
-        BoxArea
+        public double BoxArea(Box box)
+        {
+            return (box.X[1]-box.X[0])*(box.Y[1]-box.Y[0]);
+        }
 
         //Main 
-        CombinedMinBBMulti
+        //CombinedMinBBMulti
     }
 }
