@@ -147,7 +147,7 @@ namespace OBB
         }
 
         // gets a plane-aligned bounding box
-        public Box BoundingBoxPlane(List<GeometryBase> objs, Plane plane, bool accurate = true)
+        public Box BoundingBoxPlane(List<GeometryBase> objs, Plane plane, bool ret_pts= false, bool accurate = true)
         {
             Plane wxy_plane = Rhino.Geometry.Plane.WorldXY;
             Transform xform = Rhino.Geometry.Transform.ChangeBasis(wxy_plane, plane);
@@ -167,21 +167,43 @@ namespace OBB
 
             Transform plane_to_world = Rhino.Geometry.Transform.ChangeBasis(plane, wxy_plane);
 
-            //if (ret_pts == true)                                ///can not
-            //{
-            //    Point3d[] corners = bbox.GetCorners();
-            //    foreach (Point3d corner in corners)
-            //    {
-            //        corner.Transform(plane_to_world);
-            //    }
-            //    return corners;
-            //}
 
             Box box = new Rhino.Geometry.Box(bbox);
             box.Transform(plane_to_world);
             return box;
         }
 
+        public Point3d[] BoundingBoxPlanept(List<GeometryBase> objs, Plane plane, bool ret_pts = false, bool accurate = true)
+        {
+            Plane wxy_plane = Rhino.Geometry.Plane.WorldXY;
+            Transform xform = Rhino.Geometry.Transform.ChangeBasis(wxy_plane, plane);
+            BoundingBox bbox = Rhino.Geometry.BoundingBox.Empty;
+
+            foreach (GeometryBase obj in objs)
+            {
+                BoundingBox objectbbox = Objectbbox(obj, xform, accurate);
+                bbox = Rhino.Geometry.BoundingBox.Union(bbox, objectbbox);
+            }
+
+            if (bbox.IsValid != true)         //not sure its necessary 
+            {
+                Box emptybox = Rhino.Geometry.Box.Empty;
+                return emptybox.GetCorners();
+            }
+
+            Transform plane_to_world = Rhino.Geometry.Transform.ChangeBasis(plane, wxy_plane);
+
+ 
+            Point3d[] corners = bbox.GetCorners();
+            foreach (Point3d corner in corners)
+            {
+            corner.Transform(plane_to_world);
+            }
+           return corners;
+
+
+           
+        }
         // gets a plane-aligned bounding box - inside method
         public BoundingBox Objectbbox(GeometryBase geom, Transform xform, bool accurate)
         {
@@ -475,11 +497,11 @@ namespace OBB
         }
 
         //Main 
-        public void CombinedMinBBMulti()
+        public void CombinedMinBBMulti(List<GeometryBase> objs, int fine_sample)
         {
             int prec = Rhino.RhinoDoc.ActiveDoc.DistanceDisplayPrecision;
             string us = Rhino.RhinoDoc.ActiveDoc.GetUnitSystemName(true, false, false, false);
-
+            string OUT = "";
             List<GeometryBase> inputs = objs;
 
             foreach (GeometryBase obj in objs)
@@ -489,6 +511,7 @@ namespace OBB
                 DateTime st = TimeZone.CurrentTimeZone.ToLocalTime(new DateTime(1970, 1, 1));
                 double stime = (dt - st).TotalMilliseconds;
                 Plane plane = CheckObjCoPlanarity(objs);
+                int count = fine_sample;
 
                 List<Brep> bb = new List<Brep>(); 
                 if(plane != null)
@@ -504,18 +527,57 @@ namespace OBB
                         Console.WriteLine(msg);
                         //launch planar bounding box routine
                         Box f_bb = Box.Empty;
+                        Point3d[] f_bbpt = Box.Empty.GetCorners();
                         double curr_area = 1.0;
                         int i = 0;
 
                         MinBoundingRectanglePlane(objs,plane,out f_bb, out curr_area, out i);
                         int passes = i;
 
-                        bb.Add(Rhino.Geometry.Brep.CreateFromCornerPoints(f_bb[0]))
+                        bb.Add(Rhino.Geometry.Brep.CreateFromCornerPoints(f_bbpt[0], f_bbpt[1], f_bbpt[2], f_bbpt[3], 0.1));
+                        Console.WriteLine("k{}", f_bbpt);
 
-
-
+                        double fa = Math.Round(curr_area, prec);
+                    //msg = "{} refinement stages. ".format(passes)
+                    //msg += "Minimum bounding box area = {} sq. {}".format(fa, us)
+                    //msg += " Elapsed time: {:.2f} sec.".format(time.time() - st)
+ 
                     }
                 }
+
+                else
+                {
+                    // standard sample count=10 --> 1000 boxes per pass
+                    // fine sample count=18 --> 5832 boxes per pass
+                    
+                    string cp_msg = "";
+
+                    
+                    if(objs.Count==1)
+                    {
+                        cp_msg = "Selected object is not planar -";
+                    }
+                    
+                    else
+                    {
+                       cp_msg = "Selected object are not planar -";
+                    }
+                    cp_msg += "launching 3D bounding box calculation.";
+                    Console.WriteLine(cp_msg);
+                }
+
+                
+                double curr_vol = 0.0;
+                Plane wxy_plane = Rhino.Geometry.Plane.WorldXY;
+                Box curr_bb = Box.Empty;
+                int passes = 0;
+                Min3DBoundingBox(objs, wxy_plane,count,false,false,out curr_bb, out curr_vol, out passes);
+
+                bb.Add(curr_bb.ToBrep());
+                double fv = Math.Round(curr_vol, prec);
+                //    msg = "Final volume after {} passes is {} {}3".format(passes, fv, us)
+                //msg += " | Elapsed time: {:.2f} sec.".format(time.time() - st)
+                //Console.WriteLine(msg);
             }
 
 

@@ -59,13 +59,7 @@ namespace OBB
 
             //=============================================================
 
-            A = OBBSystemCheck(G);
-
-
-            List<Circle> myoutput = myOBBSystem.ADDCIRCLE(OBJS);
-            DA.SetDataList("Test", myoutput);
-            DA.SetData("ADD", Sumnumber);
-
+  
 
 
 
