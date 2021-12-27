@@ -19,12 +19,14 @@ namespace OBB
             Plane myplane = new Plane();
             bool myresult = new bool();
 
+            RhinoDoc rd = RhinoDoc.ActiveDoc;
+            double tol = rd.ModelAbsoluteTolerance;
             foreach (var obj in objs)
             {
                 if (obj is Rhino.Geometry.Curve)
                 {
                     Curve objcurve = (Curve)obj;
-                    myresult = objcurve.TryGetPlane(out myplane);
+                    myresult = objcurve.TryGetPlane(out myplane,tol);
 
                     //if (myresult == false)
                     //{
@@ -66,7 +68,7 @@ namespace OBB
                     Brep objbrep = (Brep)obj;
                     foreach (BrepFace face in objbrep.Faces)
                     {
-                        myresult = face.TryGetPlane(out myplane);
+                        myresult = face.TryGetPlane(out myplane, tol);
 
                         //if (myresult == false)
                         //{
@@ -87,7 +89,7 @@ namespace OBB
                 else if (obj is Rhino.Geometry.Surface)
                 {
                     Surface objsurface = (Surface)obj;
-                    myresult = objsurface.TryGetPlane(out myplane);
+                    myresult = objsurface.TryGetPlane(out myplane, tol);
                     //if (myresult == false)
                     //{
                     //    Print("surface.TryGetPlane failed");
@@ -107,7 +109,7 @@ namespace OBB
                 else if (obj is Rhino.Geometry.Extrusion)
                 {
                     Extrusion objextrusion = (Extrusion)obj;
-                    myresult = objextrusion.TryGetPlane(out myplane);
+                    myresult = objextrusion.TryGetPlane(out myplane, tol);
                     //if (myresult == false)
                     //{
                     //    Print("surface.TryGetPlane failed");
@@ -473,6 +475,50 @@ namespace OBB
         }
 
         //Main 
-        //CombinedMinBBMulti
+        public void CombinedMinBBMulti()
+        {
+            int prec = Rhino.RhinoDoc.ActiveDoc.DistanceDisplayPrecision;
+            string us = Rhino.RhinoDoc.ActiveDoc.GetUnitSystemName(true, false, false, false);
+
+            List<GeometryBase> inputs = objs;
+
+            foreach (GeometryBase obj in objs)
+            {
+                Console.WriteLine("checking object planarity/coplanarity...");
+                DateTime dt = System.DateTime.Now;
+                DateTime st = TimeZone.CurrentTimeZone.ToLocalTime(new DateTime(1970, 1, 1));
+                double stime = (dt - st).TotalMilliseconds;
+                Plane plane = CheckObjCoPlanarity(objs);
+
+                List<Brep> bb = new List<Brep>(); 
+                if(plane != null)
+                {
+                    if (objs.Count==1)
+                    {
+                        string msg = "Selected object is planar - ";
+                    }
+                    else
+                    {
+                        string msg = "All selected objects are coplanar - ";
+                        msg += "launching 2D planar bounding rectangle calculation.";
+                        Console.WriteLine(msg);
+                        //launch planar bounding box routine
+                        Box f_bb = Box.Empty;
+                        double curr_area = 1.0;
+                        int i = 0;
+
+                        MinBoundingRectanglePlane(objs,plane,out f_bb, out curr_area, out i);
+                        int passes = i;
+
+                        bb.Add(Rhino.Geometry.Brep.CreateFromCornerPoints(f_bb[0]))
+
+
+
+                    }
+                }
+            }
+
+
+        }
     }
 }
