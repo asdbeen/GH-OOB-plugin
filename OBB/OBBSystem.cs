@@ -512,7 +512,7 @@ namespace OBB
                 double stime = (dt - st).TotalMilliseconds;
                 Plane plane = CheckObjCoPlanarity(objs);
                 int count = fine_sample;
-
+                int passes = 0;
                 List<Brep> bb = new List<Brep>(); 
                 if(plane != null)
                 {
@@ -532,7 +532,7 @@ namespace OBB
                         int i = 0;
 
                         MinBoundingRectanglePlane(objs,plane,out f_bb, out curr_area, out i);
-                        int passes = i;
+                        passes = i;
 
                         bb.Add(Rhino.Geometry.Brep.CreateFromCornerPoints(f_bbpt[0], f_bbpt[1], f_bbpt[2], f_bbpt[3], 0.1));
                         Console.WriteLine("k{}", f_bbpt);
@@ -570,7 +570,7 @@ namespace OBB
                 double curr_vol = 0.0;
                 Plane wxy_plane = Rhino.Geometry.Plane.WorldXY;
                 Box curr_bb = Box.Empty;
-                int passes = 0;
+                
                 Min3DBoundingBox(objs, wxy_plane,count,false,false,out curr_bb, out curr_vol, out passes);
 
                 bb.Add(curr_bb.ToBrep());
