@@ -42,14 +42,14 @@ namespace OBB
                         ptlist.Add(mynurbscurve.Points[i].Location);
 
                     }
-                    Print("Here add a Curve");
+                    //Print("Here add a Curve");
                 }
 
                 else if (obj is Rhino.Geometry.Point)
                 {
                     Point objpoint = (Point)obj;
                     ptlist.Add(objpoint.Location);
-                    Print("Here add a Point");
+                    //Print("Here add a Point");
                 }
 
                 else if (obj is Rhino.Geometry.PointCloud)
@@ -60,7 +60,7 @@ namespace OBB
                     {
                         ptlist.Add(i);
                     }
-                    Print("Here add a PointCloud");
+                    //Print("Here add a PointCloud");
                 }
 
                 else if (obj is Rhino.Geometry.Brep)
@@ -82,7 +82,7 @@ namespace OBB
                         {
                             ptlist.Add(cp.Location);
                         }
-                        Print("Here add a Brep");
+                        //Print("Here add a Brep");
                     }
                 }
 
@@ -102,7 +102,7 @@ namespace OBB
                         ptlist.Add(cp.Location);
                     }
 
-                    Print("Here add a Surface");
+                    //Print("Here add a Surface");
 
                 }
 
@@ -122,7 +122,7 @@ namespace OBB
                     {
                         ptlist.Add(cp.Location);
                     }
-                    Print("Here add a Extrusion");
+                    //Print("Here add a Extrusion");
                 }
 
                 else if (obj is Rhino.Geometry.Mesh)
@@ -133,7 +133,7 @@ namespace OBB
                         ptlist.Add(vert);
 
                     }
-                    Print("Here add a mesh");
+                    //Print("Here add a mesh");
                 }
 
                 else
@@ -147,7 +147,7 @@ namespace OBB
         }
 
         // gets a plane-aligned bounding box
-        public Box BoundingBoxPlane(List<GeometryBase> objs, Plane plane, bool ret_pts= false, bool accurate = true)
+        public Box BoundingBoxPlane(List<GeometryBase> objs, Plane plane, bool accurate = true)
         {
             Plane wxy_plane = Rhino.Geometry.Plane.WorldXY;
             Transform xform = Rhino.Geometry.Transform.ChangeBasis(wxy_plane, plane);
@@ -173,7 +173,7 @@ namespace OBB
             return box;
         }
 
-        public Point3d[] BoundingBoxPlanept(List<GeometryBase> objs, Plane plane, bool ret_pts = false, bool accurate = true)
+        public Point3d[] BoundingBoxPlanept(List<GeometryBase> objs, Plane plane, bool accurate = true)
         {
             Plane wxy_plane = Rhino.Geometry.Plane.WorldXY;
             Transform xform = Rhino.Geometry.Transform.ChangeBasis(wxy_plane, plane);
@@ -335,6 +335,7 @@ namespace OBB
             //this is the main 2D bb calculation search function
 
             curr_bb = BoundingBoxPlane(objs, init_plane, false);
+            
             curr_vol = curr_bb.Volume;
 
             double tot_ang = Math.PI * 0.5;  //90 degrees for intial octant
@@ -497,13 +498,15 @@ namespace OBB
         }
 
         //Main 
-        public void CombinedMinBBMulti(List<GeometryBase> objs, int fine_sample)
+        public List<Brep> CombinedMinBBMulti(List<GeometryBase> objs, int fine_sample)
         {
             int prec = Rhino.RhinoDoc.ActiveDoc.DistanceDisplayPrecision;
             string us = Rhino.RhinoDoc.ActiveDoc.GetUnitSystemName(true, false, false, false);
             string OUT = "";
             List<GeometryBase> inputs = objs;
-
+            int count = fine_sample;
+            int passes = 0;
+            List<Brep> bb = new List<Brep>();
             foreach (GeometryBase obj in objs)
             {
                 Console.WriteLine("checking object planarity/coplanarity...");
@@ -511,12 +514,10 @@ namespace OBB
                 DateTime st = TimeZone.CurrentTimeZone.ToLocalTime(new DateTime(1970, 1, 1));
                 double stime = (dt - st).TotalMilliseconds;
                 Plane plane = CheckObjCoPlanarity(objs);
-                int count = fine_sample;
-                int passes = 0;
-                List<Brep> bb = new List<Brep>(); 
+                
                 if(plane != null)
                 {
-                    if (objs.Count==1)
+                    if (objs.Count == 1)
                     {
                         string msg = "Selected object is planar - ";
                     }
@@ -525,6 +526,8 @@ namespace OBB
                         string msg = "All selected objects are coplanar - ";
                         msg += "launching 2D planar bounding rectangle calculation.";
                         Console.WriteLine(msg);
+
+                    
                         //launch planar bounding box routine
                         Box f_bb = Box.Empty;
                         Point3d[] f_bbpt = Box.Empty.GetCorners();
@@ -579,7 +582,7 @@ namespace OBB
                 //msg += " | Elapsed time: {:.2f} sec.".format(time.time() - st)
                 //Console.WriteLine(msg);
             }
-
+            return bb;
 
         }
     }

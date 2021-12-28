@@ -39,8 +39,7 @@ namespace OBB
         protected override void RegisterOutputParams(GH_Component.GH_OutputParamManager pManager)
         {
             pManager.AddGeometryParameter("Oriented Bounding Box", "OBB", "Outcome", GH_ParamAccess.list);
-            pManager.AddGeometryParameter("Test", "T", "Test only", GH_ParamAccess.item);
-            pManager.AddIntegerParameter("ADD", "A", "The number of iteration", GH_ParamAccess.item);
+
         }
 
         /// <summary>
@@ -53,13 +52,18 @@ namespace OBB
             
             List<GeometryBase> OBJS = new List<GeometryBase> ();
             int I = 0;
+            List<Brep> bb = new List<Brep> ();
 
             DA.GetDataList(0, OBJS);
             DA.GetData("Iteration", ref I);
 
+            var myobbsystem = new OBBSystem();
+            bb= myobbsystem.CombinedMinBBMulti(OBJS, I);
+            DA.SetDataList(0,bb);
+            
             //=============================================================
 
-  
+
 
 
 
