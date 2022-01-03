@@ -18,7 +18,6 @@ namespace OBB
             List<Point3d> ptlist = new List<Point3d>();
             Plane myplane = new Plane();
             bool myresult = new bool();
-
             RhinoDoc rd = RhinoDoc.ActiveDoc;
             double tol = rd.ModelAbsoluteTolerance;
             foreach (var obj in objs)
@@ -26,15 +25,21 @@ namespace OBB
                 if (obj is Rhino.Geometry.Curve)
                 {
                     Curve objcurve = (Curve)obj;
-                    myresult = objcurve.TryGetPlane(out myplane,tol);
+                    myresult = objcurve.TryGetPlane(out myplane, tol);
 
-                    //if (myresult == false)
-                    //{
-                    //Print("curve.TryGetPlane failed");
-                    //return myplane;
-                    //}
+                    if (myresult == false)
+                    {
+                        myplane = default(Plane);
+                        return myplane;
+                    }
+
                     NurbsCurve mynurbscurve = objcurve.ToNurbsCurve();
 
+                    if (mynurbscurve == default(NurbsCurve))
+                    {
+                        myplane = default(Plane);
+                        return myplane;
+                    }
 
                     for (int i = 0; i < mynurbscurve.Points.Count; i = i + 1)
                     {
@@ -42,14 +47,14 @@ namespace OBB
                         ptlist.Add(mynurbscurve.Points[i].Location);
 
                     }
-                    //Print("Here add a Curve");
+
                 }
 
                 else if (obj is Rhino.Geometry.Point)
                 {
                     Point objpoint = (Point)obj;
                     ptlist.Add(objpoint.Location);
-                    //Print("Here add a Point");
+
                 }
 
                 else if (obj is Rhino.Geometry.PointCloud)
@@ -60,7 +65,7 @@ namespace OBB
                     {
                         ptlist.Add(i);
                     }
-                    //Print("Here add a PointCloud");
+
                 }
 
                 else if (obj is Rhino.Geometry.Brep)
@@ -70,19 +75,24 @@ namespace OBB
                     {
                         myresult = face.TryGetPlane(out myplane, tol);
 
-                        //if (myresult == false)
-                        //{
-                        ///Print("face.TryGetPlane failed");
-                        //    return myplane;
-                        //}
+                        if (myresult == false)
+                        {
+                            myplane = default(Plane);
+                            return myplane;
+                        }
                         NurbsSurface mysurfaceface = face.ToNurbsSurface();
 
+                        if (mysurfaceface == default(NurbsSurface))
+                        {
+                            myplane = default(Plane);
+                            return myplane;
+                        }
 
                         foreach (ControlPoint cp in mysurfaceface.Points)
                         {
                             ptlist.Add(cp.Location);
                         }
-                        //Print("Here add a Brep");
+
                     }
                 }
 
@@ -90,19 +100,27 @@ namespace OBB
                 {
                     Surface objsurface = (Surface)obj;
                     myresult = objsurface.TryGetPlane(out myplane, tol);
-                    //if (myresult == false)
-                    //{
-                    //    Print("surface.TryGetPlane failed");
-                    //    return myplane;
-                    //}
+                    if (myresult == false)
+                    {
+                        myplane = default(Plane);
+                        return myplane;
+                    }
+
                     NurbsSurface mysurfaceface = objsurface.ToNurbsSurface();
+
+                    if (mysurfaceface == default(NurbsSurface))
+                    {
+                        myplane = default(Plane);
+                        return myplane;
+                    }
+
 
                     foreach (ControlPoint cp in mysurfaceface.Points)
                     {
                         ptlist.Add(cp.Location);
                     }
 
-                    //Print("Here add a Surface");
+
 
                 }
 
@@ -110,19 +128,23 @@ namespace OBB
                 {
                     Extrusion objextrusion = (Extrusion)obj;
                     myresult = objextrusion.TryGetPlane(out myplane, tol);
-                    //if (myresult == false)
-                    //{
-                    //    Print("surface.TryGetPlane failed");
-                    //    return myplane;
-                    //}
+                    if (myresult == false)
+                    {
+                        myplane = default(Plane);
+                        return myplane;
+                    }
 
                     NurbsSurface mysurfaceface = objextrusion.ToNurbsSurface();
-
+                    if (mysurfaceface == default(NurbsSurface))
+                    {
+                        myplane = default(Plane);
+                        return myplane;
+                    }
                     foreach (ControlPoint cp in mysurfaceface.Points)
                     {
                         ptlist.Add(cp.Location);
                     }
-                    //Print("Here add a Extrusion");
+
                 }
 
                 else if (obj is Rhino.Geometry.Mesh)
@@ -133,7 +155,7 @@ namespace OBB
                         ptlist.Add(vert);
 
                     }
-                    //Print("Here add a mesh");
+
                 }
 
                 else
@@ -147,8 +169,9 @@ namespace OBB
         }
 
         // gets a plane-aligned bounding box
-        public Box BoundingBoxPlane(List<GeometryBase> objs, Plane plane, bool accurate = true)
+        public Box BoundingBoxPlane(List<GeometryBase> objs, Plane plane, bool accurate)
         {
+            accurate = true;
             Plane wxy_plane = Rhino.Geometry.Plane.WorldXY;
             Transform xform = Rhino.Geometry.Transform.ChangeBasis(wxy_plane, plane);
             BoundingBox bbox = Rhino.Geometry.BoundingBox.Empty;
@@ -159,7 +182,7 @@ namespace OBB
                 bbox = Rhino.Geometry.BoundingBox.Union(bbox, objectbbox);
             }
 
-            if (bbox.IsValid != true)         //not sure its necessary 
+            if (bbox.IsValid != true)         //not sure its necessary
             {
                 Box emptybox = Rhino.Geometry.Box.Empty;
                 return emptybox;
@@ -173,37 +196,7 @@ namespace OBB
             return box;
         }
 
-        public Point3d[] BoundingBoxPlanept(List<GeometryBase> objs, Plane plane, bool accurate = true)
-        {
-            Plane wxy_plane = Rhino.Geometry.Plane.WorldXY;
-            Transform xform = Rhino.Geometry.Transform.ChangeBasis(wxy_plane, plane);
-            BoundingBox bbox = Rhino.Geometry.BoundingBox.Empty;
 
-            foreach (GeometryBase obj in objs)
-            {
-                BoundingBox objectbbox = Objectbbox(obj, xform, accurate);
-                bbox = Rhino.Geometry.BoundingBox.Union(bbox, objectbbox);
-            }
-
-            if (bbox.IsValid != true)         //not sure its necessary 
-            {
-                Box emptybox = Rhino.Geometry.Box.Empty;
-                return emptybox.GetCorners();
-            }
-
-            Transform plane_to_world = Rhino.Geometry.Transform.ChangeBasis(plane, wxy_plane);
-
- 
-            Point3d[] corners = bbox.GetCorners();
-            foreach (Point3d corner in corners)
-            {
-            corner.Transform(plane_to_world);
-            }
-           return corners;
-
-
-           
-        }
         // gets a plane-aligned bounding box - inside method
         public BoundingBox Objectbbox(GeometryBase geom, Transform xform, bool accurate)
         {
@@ -218,6 +211,11 @@ namespace OBB
                     BoundingBox geompt3dbbox = new Rhino.Geometry.BoundingBox(geompt3d, geompt3d);
                     return geompt3dbbox;
                 }
+            }
+
+            if (xform != null)
+            {
+                return geom.GetBoundingBox(xform);
             }
             return geom.GetBoundingBox(accurate);
         }
@@ -270,8 +268,8 @@ namespace OBB
             List<Plane> out_plane = new List<Plane>();
             plane.Rotate(-tot_ang * 0.5, axis);
             out_plane.Add(new Rhino.Geometry.Plane(plane));
-            double inc = tot_ang / (divs-1);
-            for(int i = 0; i < divs-1; i++)
+            double inc = tot_ang / (divs - 1);
+            for (int i = 0; i < divs - 1; i++)
             {
                 plane.Rotate(inc, axis);
                 out_plane.Add(new Rhino.Geometry.Plane(plane));
@@ -279,7 +277,8 @@ namespace OBB
             return out_plane;
         }
 
-        public List<Plane> RotatePlaneArray3D(Plane view_plane, double tot_ang ,int divs)
+
+        public List<Plane> RotatePlaneArray3D(Plane view_plane, double tot_ang, int divs)
         {
             //generate a 3D array of refinement planes (works with narrow angles)
             List<Plane> out_planes = new List<Plane>();
@@ -288,12 +287,12 @@ namespace OBB
             foreach (Plane y_plane in yaw_planes)
             {
                 //use RotatedPlaneArray to generate up-down 'tilt' array(roll)
-                List<Plane> roll_planes = RotatedPlaneArray(y_plane,tot_ang,divs,y_plane.ZAxis);
+                List<Plane> roll_planes = RotatedPlaneArray(y_plane, tot_ang, divs, y_plane.YAxis);
 
                 foreach (Plane r_plane in roll_planes)
                 {
                     //use RotatedPlaneArray to generate up-down 'tilt' array(pitch)
-                    List<Plane> pitch_planes = RotatedPlaneArray(r_plane, tot_ang, divs, r_plane.ZAxis);
+                    List<Plane> pitch_planes = RotatedPlaneArray(r_plane, tot_ang, divs, r_plane.XAxis);
 
                     foreach (Plane p_plane in pitch_planes)
                     {
@@ -307,16 +306,16 @@ namespace OBB
 
 
         //this is the main 3D bb calculation search function
-        public void MinBBPlane(List<GeometryBase> objs,out Plane best_plane,Plane init_plane,List<Plane> planes, ref Box curr_box, ref double curr_vol)
+        public void MinBBPlane(List<GeometryBase> objs, ref Plane best_plane, List<Plane> planes, ref Box curr_box, ref double curr_vol)
         {
 
-            best_plane = init_plane;
+
 
             foreach (Plane plane in planes)
             {
-                Box bb = BoundingBoxPlane(objs, plane);
-                
-                if (bb.Volume<curr_vol)
+                Box bb = BoundingBoxPlane(objs, plane,true);
+
+                if (bb.Volume < curr_vol)
                 {
                     curr_vol = bb.Volume;
                     best_plane = plane;
@@ -324,18 +323,18 @@ namespace OBB
                 }
 
             }
-            
+
         }
 
         //3D (non-planar) bounding box routine
-        public void Min3DBoundingBox(List<GeometryBase> objs,Plane init_plane, int count, bool rel_stop,bool im_rep,out Box curr_bb,out double curr_vol,out int passes )
+        public void Min3DBoundingBox(List<GeometryBase> objs, Plane init_plane, int count, bool rel_stop, bool im_rep, out Box curr_bb, out double curr_vol, out int passes, out List<string> insidemsg)
         {
             // for non-planar or non-coplanar object(s)
             // get initial fast bb in init plane (World XY), plus volume to compare
             //this is the main 2D bb calculation search function
 
-            curr_bb = BoundingBoxPlane(objs, init_plane, false);
-            
+            curr_bb = BoundingBoxPlane(objs, init_plane,true);
+
             curr_vol = curr_bb.Volume;
 
             double tot_ang = Math.PI * 0.5;  //90 degrees for intial octant
@@ -343,35 +342,40 @@ namespace OBB
             int max_passes = 20; //safety factor
             int prec = Rhino.RhinoDoc.ActiveDoc.DistanceDisplayPrecision;
             string us = Rhino.RhinoDoc.ActiveDoc.GetUnitSystemName(true, false, false, false);
-
+            insidemsg = new List<string>();
             //run intitial bb calculation
             List<Plane> xyz_planes = GenerateOctantPlane(count);
             Plane best_plane = new Plane();
-            MinBBPlane(objs, out best_plane, init_plane, xyz_planes, ref curr_bb, ref curr_vol);
+            MinBBPlane(objs, ref best_plane, xyz_planes, ref curr_bb, ref curr_vol);
             //report the results of intial rough calculation
-            if (im_rep==true)
+            if (im_rep == true)
             {
-                Console.WriteLine("Initial pass 0, volume:{0} {1}3", Math.Round(curr_vol, prec), us);
+                double roundcurr_vol = System.Math.Round(curr_vol, prec);
+                insidemsg.Add("Initial pass 0, volume: " + roundcurr_vol.ToString() + " cu " + us.ToString());
             }
             //refine with smaller angles arround best fit plane, loop until...
             int i = 0;
-            for(i=0; i < max_passes; i++)
+            for (i = 0; i < max_passes; i++)
             {
                 double prev_vol = curr_vol;
 
                 //reduce angle by factor, use refinement planes to generate array
 
                 tot_ang *= factor;
-                List <Plane> ref_planes = RotatePlaneArray3D(best_plane,tot_ang,count);
-                MinBBPlane(objs, out best_plane, best_plane, ref_planes, ref curr_bb, ref curr_vol);
+                List<Plane> ref_planes = RotatePlaneArray3D(best_plane, tot_ang, count);
+                MinBBPlane(objs, ref best_plane, ref_planes, ref curr_bb, ref curr_vol);
+
                 double vol_diff = prev_vol - curr_vol;//vol. diff. over last pass, should be positive or 0
-                // print "Volume difference from last pass: {}".format(vol_diff) #debug(python language)
+                if (im_rep == true)
+                {
+                    insidemsg.Add("Volume difference from last pass:  " + vol_diff.ToString());
+                }
                 // check if difference is less than minimum "significant"
                 // rel_stop==True: relative stop value <.01% difference from previous
 
-                if (rel_stop==true)
+                if (rel_stop == true)
                 {
-                    if (vol_diff < 0.0001*prev_vol)
+                    if (vol_diff < 0.0001 * prev_vol)
                     {
                         break;
                     }
@@ -386,37 +390,39 @@ namespace OBB
                 }
                 Rhino.RhinoApp.Wait();
 
-                if (im_rep ==true)
+                if (im_rep == true)
                 {
-                    Console.WriteLine("Refine pass {0}, volume:{1} {2}3", i + 1, Math.Round(curr_vol, prec), us);
+                    int k = i + 1;
+                    double roundcurr_vol = System.Math.Round(curr_vol, prec);
+                    insidemsg.Add("Refine pass " + k.ToString() + "  volume: " + roundcurr_vol.ToString() + " cu " + us.ToString());
                 }
 
                 //get out of loop if escape is pressed
 
-                if (Console.ReadKey().Key != ConsoleKey.Escape)
-                {
-                    Console.WriteLine("Refinement aborted after {0} passes", i + 1);
-                    break;
-                }
+                //if (Console.ReadKey().Key != ConsoleKey.Escape)
+                //{
+                //Console.WriteLine("Refinement aborted after {0} passes", i + 1);
+                //break;
+                //}
             }
             passes = i + 1;
 
 
         }
 
-        public void PlanarMinBB(List<GeometryBase> objs,Plane plane, double tot_ang,int divs,out Plane curr_plane, out double curr_area)
+        public void PlanarMinBB(List<GeometryBase> objs, Plane plane, double tot_ang, int divs, out Plane curr_plane, out double curr_area)
         {
             double inc = tot_ang / divs;
             //rotate plane half total angle minus direction
-            plane.Rotate(-tot_ang*0.5,plane.ZAxis,plane.Origin);
-            Box bb = BoundingBoxPlane(objs, plane);
+            plane.Rotate(-tot_ang * 0.5, plane.ZAxis, plane.Origin);
+            Box bb = BoundingBoxPlane(objs, plane, true);
             curr_plane = new Plane(plane);
             curr_area = BoxArea(bb);
             //loop through angle increments
-            for(int i = 0; i < divs; i++)
+            for (int i = 0; i < divs; i++)
             {
-                plane.Rotate(inc,plane.ZAxis,plane.Origin);
-                bb = BoundingBoxPlane(objs, plane);
+                plane.Rotate(inc, plane.ZAxis, plane.Origin);
+                bb = BoundingBoxPlane(objs, plane, true);
                 double new_area = BoxArea(bb);
                 if (new_area < curr_area)
                 {
@@ -429,21 +435,25 @@ namespace OBB
         }
 
         //2D planar bounding rectangle routine
-        public void MinBoundingRectanglePlane(List<GeometryBase> objs,Plane curr_plane, out Box f_bb,  out Double curr_area, out int i, bool im_rep = false)
+        public void MinBoundingRectanglePlane(List<GeometryBase> objs, Plane curr_plane, bool im_rep, out Box f_bb, out Double curr_area, out int i, out List<string> insidemsg)
         {
             //pass True argument above if you want to print intermediate results
             //initialize
-            double factor = 0.01;
-            double angle = Math.PI * 0.5;
-            int divs = 90;
+            double factor = 0.01;  //0.01 (1/100 of model abs tolerance)
+            double angle = Math.PI * 0.5; //start angle 90 degrees
+            int divs = 90;  //initial division 1 degree intervals
             RhinoDoc rd = RhinoDoc.ActiveDoc;
             double tol = rd.ModelAbsoluteTolerance;
+            insidemsg = new List<string>();
             string err_msg = "Unable to calculate bouding box area";
+
+
             f_bb = new Box();
-            i= 0;
-            DateTime dt = System.DateTime.Now;
-            DateTime st = TimeZone.CurrentTimeZone.ToLocalTime(new DateTime(1970, 1, 1));
-            double stime = (dt - st).TotalMilliseconds;
+            i = 0;
+
+
+
+
 
             ///get initial rough bounding box
 
@@ -451,136 +461,164 @@ namespace OBB
             curr_area = BoxArea(init_bb);
             if (im_rep == true)
             {
-                Console.WriteLine("Initial area: {}", curr_area);
+                insidemsg.Add("Initial area:" + curr_area.ToString());
             }
 
             //main calculation loop
             int safe = 10;
+
             for (i = 0; i < safe; i++)
             {
 
-                PlanarMinBB(objs,curr_plane,angle,divs,out curr_plane, out curr_area);
+                PlanarMinBB(objs, curr_plane, angle, divs, out curr_plane, out curr_area);
                 double new_area = curr_area;
                 //abort if area is 0 or extremly small
-                if (new_area<tol*0.1)
+                if (new_area < tol * 0.1)
                 {
-                    Console.WriteLine(err_msg);
+                    insidemsg.Add(err_msg);
                     return;
                 }
                 //break out of loop if new area is the smae as prev. area within limit
-                if (Math.Abs(curr_area-new_area)<factor*tol)
+                if (Math.Abs(curr_area - new_area) < factor * tol)
                 {
+
                     break;
                 }
                 //otherwise,decrease increments and loop
                 curr_area = new_area;
                 angle *= (1 / divs);
-                if(im_rep == true)
+
+                if (im_rep == true)
                 {
-                    Console.WriteLine("Refine stage {0} Area: {1}",i+1,curr_area);
+                    int k = i + 1;
+                    insidemsg.Add("Refine stage" + k.ToString() + "Area:" + curr_area.ToString());
                     Rhino.RhinoApp.Wait();//wait for command line to print...
+
                 }
-                if (i==10)
+                if (i == 10)
                 {
-                    Console.WriteLine("Max loop limit reached");//debug
+                    insidemsg.Add("Max loop limit reached");//debug
                 }
             }
 
-           f_bb =BoundingBoxPlane(objs,curr_plane,true);
+            f_bb = BoundingBoxPlane(objs, curr_plane, true);
 
-            
+
         }
 
         //used for planar bounding rectangle calculation
         public double BoxArea(Box box)
         {
-            return (box.X[1]-box.X[0])*(box.Y[1]-box.Y[0]);
+            return (box.X[1] - box.X[0]) * (box.Y[1] - box.Y[0]);
         }
 
         //Main 
-        public List<Brep> CombinedMinBBMulti(List<GeometryBase> objs, int fine_sample)
+        public Box CombinedMinBBMulti(List<GeometryBase> objs, int fine_sample, bool im_rep, out List<string> msg, out Box bb)
         {
+            msg = new List<string>();
             int prec = Rhino.RhinoDoc.ActiveDoc.DistanceDisplayPrecision;
             string us = Rhino.RhinoDoc.ActiveDoc.GetUnitSystemName(true, false, false, false);
-            string OUT = "";
+
             List<GeometryBase> inputs = objs;
             int count = fine_sample;
             int passes = 0;
-            List<Brep> bb = new List<Brep>();
-            foreach (GeometryBase obj in objs)
+            bb = Box.Empty;
+            List<string> insidemsg = new List<string>();
+
+
+            msg.Add("checking object planarity/coplanarity...\r\n");
+
+            DateTime starttime = System.DateTime.Now;
+
+
+            Plane plane = CheckObjCoPlanarity(objs);
+
+            if (plane != default(Plane))
             {
-                Console.WriteLine("checking object planarity/coplanarity...");
-                DateTime dt = System.DateTime.Now;
-                DateTime st = TimeZone.CurrentTimeZone.ToLocalTime(new DateTime(1970, 1, 1));
-                double stime = (dt - st).TotalMilliseconds;
-                Plane plane = CheckObjCoPlanarity(objs);
-                
-                if(plane != null)
+                if (objs.Count == 1)
                 {
-                    if (objs.Count == 1)
-                    {
-                        string msg = "Selected object is planar - ";
-                    }
-                    else
-                    {
-                        string msg = "All selected objects are coplanar - ";
-                        msg += "launching 2D planar bounding rectangle calculation.";
-                        Console.WriteLine(msg);
+                    msg.Add("Selected object is planar -\r\n");
+                }
+                else
+                {
+                    msg.Add("All selected objects are coplanar - \r\n");
+                    msg.Add("launching 2D planar bounding rectangle calculation.\r\n");
+                }
 
-                    
-                        //launch planar bounding box routine
-                        Box f_bb = Box.Empty;
-                        Point3d[] f_bbpt = Box.Empty.GetCorners();
-                        double curr_area = 1.0;
-                        int i = 0;
 
-                        MinBoundingRectanglePlane(objs,plane,out f_bb, out curr_area, out i);
-                        passes = i;
+                //launch planar bounding box routine
 
-                        bb.Add(Rhino.Geometry.Brep.CreateFromCornerPoints(f_bbpt[0], f_bbpt[1], f_bbpt[2], f_bbpt[3], 0.1));
-                        Console.WriteLine("k{}", f_bbpt);
+                Box f_bb = Box.Empty;
+                Point3d[] f_bbpt = Box.Empty.GetCorners();
+                double curr_area = 0.0;
+                int i = 0;
 
-                        double fa = Math.Round(curr_area, prec);
-                    //msg = "{} refinement stages. ".format(passes)
-                    //msg += "Minimum bounding box area = {} sq. {}".format(fa, us)
-                    //msg += " Elapsed time: {:.2f} sec.".format(time.time() - st)
- 
-                    }
+
+                MinBoundingRectanglePlane(objs, plane, im_rep, out f_bb, out curr_area, out i, out insidemsg);
+
+                foreach (string x in insidemsg)
+                {
+                    msg.Add(x);
+                }
+
+                passes = i;
+
+
+                bb = f_bb;
+
+                double fa = Math.Round(curr_area, prec);
+
+
+                msg.Add(passes.ToString() + " refinement stages\r\n");
+                msg.Add("Minimum bounding box area = " + fa.ToString() + " sq " + us.ToString() + "\r\n");
+
+                DateTime endtime = System.DateTime.Now;
+                double costtime = (endtime - starttime).TotalMilliseconds;
+
+                msg.Add("Elapsed time: " + costtime.ToString() + " Milliseconds");
+
+
+            }
+
+            else
+            {
+                // standard sample count=10 --> 1000 boxes per pass
+                // fine sample count=18 --> 5832 boxes per pass     //dont use here
+
+
+
+
+                if (objs.Count == 1)
+                {
+                    msg.Add("Selected object is not planar -\r\n");
                 }
 
                 else
                 {
-                    // standard sample count=10 --> 1000 boxes per pass
-                    // fine sample count=18 --> 5832 boxes per pass
-                    
-                    string cp_msg = "";
-
-                    
-                    if(objs.Count==1)
-                    {
-                        cp_msg = "Selected object is not planar -";
-                    }
-                    
-                    else
-                    {
-                       cp_msg = "Selected object are not planar -";
-                    }
-                    cp_msg += "launching 3D bounding box calculation.";
-                    Console.WriteLine(cp_msg);
+                    msg.Add("Selected object are not planar -\r\n");
                 }
 
-                
+                msg.Add("launching 3D bounding box calculation.\r\n");
                 double curr_vol = 0.0;
                 Plane wxy_plane = Rhino.Geometry.Plane.WorldXY;
                 Box curr_bb = Box.Empty;
-                
-                Min3DBoundingBox(objs, wxy_plane,count,false,false,out curr_bb, out curr_vol, out passes);
 
-                bb.Add(curr_bb.ToBrep());
+                Min3DBoundingBox(objs, wxy_plane, count, false, im_rep, out curr_bb, out curr_vol, out passes, out insidemsg);
+                foreach (string x in insidemsg)
+                {
+                    msg.Add(x);
+                }
+
+                bb = curr_bb;
                 double fv = Math.Round(curr_vol, prec);
-                //    msg = "Final volume after {} passes is {} {}3".format(passes, fv, us)
-                //msg += " | Elapsed time: {:.2f} sec.".format(time.time() - st)
-                //Console.WriteLine(msg);
+                msg.Add("Final volume after " + passes.ToString() + " passes is " + fv.ToString() + " sq3 " + us.ToString());
+
+                DateTime endtime = System.DateTime.Now;
+                double costtime = (endtime - starttime).TotalMilliseconds;
+
+                msg.Add("Elapsed time: " + costtime.ToString() + " Milliseconds");
+
+
             }
             return bb;
 
